@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClinicOS — Login</title>
+<link rel="manifest" href="/manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0f4c81; --navy-dark: #0a3560; --accent: #1a8fe3;
+    --text: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --bg: #f8fafd; --white: #ffffff; --red: #dc2626;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-wrap { width: 100%; max-width: 420px; }
+  .logo { text-align: center; margin-bottom: 32px; }
+  .logo-icon { width: 56px; height: 56px; background: var(--navy); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+  .logo-icon svg { width: 28px; height: 28px; fill: none; stroke: #fff; stroke-width: 1.8; }
+  .logo h1 { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--navy); letter-spacing: -0.5px; }
+  .logo p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .card { background: var(--white); border-radius: 16px; padding: 32px; border: 1px solid var(--border); box-shadow: 0 4px 24px rgba(15,76,129,0.08); }
+  .card h2 { font-size: 18px; font-weight: 500; margin-bottom: 24px; }
+  label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.2s; }
+  input:focus { border-color: var(--accent); background: var(--white); box-shadow: 0 0 0 3px rgba(26,143,227,0.1); }
+  .field { margin-bottom: 16px; }
+  .btn { width: 100%; padding: 12px; background: var(--navy); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+  .btn:hover { background: var(--navy-dark); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .error { background: #fef2f2; border: 1px solid #fecaca; color: var(--red); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+  .footer { text-align: center; margin-top: 20px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    </div>
+    <h1>ClinicOS</h1>
+    <p>Clinic Management System</p>
+  </div>
+  <div class="card">
+    <h2>Sign in to your account</h2>
+    <div class="error" id="error-msg"></div>
+    <div class="field"><label>Username</label><input id="username" type="text" placeholder="Enter username" autocomplete="username" /></div>
+    <div class="field"><label>Password</label><input id="password" type="password" placeholder="Enter password" autocomplete="current-password" /></div>
+    <button class="btn" id="login-btn" onclick="doLogin()">Sign in</button>
+  </div>
+  <div class="footer">Default admin login: admin / admin123</div>
+</div>
+<script>
+document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+async function doLogin() {
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('error-msg');
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  if (!u || !p) { showErr('Please enter username and password'); return; }
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  err.style.display = 'none';
+  try {
+    const r = await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u, password:p})});
+    const d = await r.json();
+    if (!r.ok) { showErr(d.error || 'Login failed'); btn.disabled=false; btn.textContent='Sign in'; return; }
+    window.location.href = '/';
+  } catch(e) { showErr('Connection error'); btn.disabled=false; btn.textContent='Sign in'; }
+}
+function showErr(msg) { const e = document.getElementById('error-msg'); e.textContent=msg; e.style.display='block'; }
+</script>
+</body>
+</html>

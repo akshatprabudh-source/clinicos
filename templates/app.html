@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClinicOS</title>
+<link rel="manifest" href="/manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #0f4c81; --navy-light: #1a6ab3; --accent: #1a8fe3;
+  --text: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+  --bg: #f8fafd; --white: #ffffff;
+  --green: #16a34a; --green-bg: #f0fdf4; --green-border: #bbf7d0;
+  --amber: #d97706; --amber-bg: #fffbeb; --amber-border: #fde68a;
+  --red: #dc2626; --red-bg: #fef2f2; --red-border: #fecaca;
+  --blue-bg: #eff6ff; --blue-border: #bfdbfe; --blue-text: #1d4ed8;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+/* Layout */
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; background: var(--navy); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; transition: transform 0.3s; }
+.sidebar-logo { padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.sidebar-logo h1 { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; }
+.sidebar-logo p { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: 8px; color: rgba(255,255,255,0.7); font-size: 13px; cursor: pointer; margin-bottom: 2px; transition: all 0.15s; user-select: none; }
+.nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-item.active { background: rgba(255,255,255,0.18); color: #fff; font-weight: 500; }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-section { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px; padding: 12px 10px 4px; }
+.sidebar-footer { padding: 12px 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+.user-chip { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; }
+.user-avatar { width: 28px; height: 28px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 500; flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 12px; color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-role { font-size: 10px; color: rgba(255,255,255,0.5); }
+.logout-btn { background: none; border: none; cursor: pointer; padding: 4px; color: rgba(255,255,255,0.5); }
+.logout-btn:hover { color: #fff; }
+.main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.topbar { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.topbar-title { font-size: 15px; font-weight: 500; }
+.topbar-date { font-size: 12px; color: var(--muted); }
+.content { padding: 24px; flex: 1; }
+.page { display: none; }
+.page.active { display: block; }
+/* Cards & components */
+.card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 14px; font-weight: 500; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+.metric { background: var(--bg); border-radius: 10px; padding: 14px 16px; }
+.metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.metric-value { font-size: 26px; font-weight: 500; line-height: 1; }
+label { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: var(--text); background: var(--white); outline: none; transition: border-color 0.15s; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,143,227,0.1); }
+.field { margin-bottom: 12px; }
+.btn { padding: 8px 16px; font-size: 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); color: var(--text); cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { background: var(--bg); }
+.btn-primary { background: var(--navy); color: #fff; border-color: var(--navy); }
+.btn-primary:hover { background: var(--navy-light); border-color: var(--navy-light); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-danger { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+.btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 500; color: var(--muted); border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.4px; }
+td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--bg); }
+.table-wrap { overflow-x: auto; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+.badge-blue { background: var(--blue-bg); color: var(--blue-text); border: 1px solid var(--blue-border); }
+.badge-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.badge-red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.pid { font-family: monospace; font-size: 12px; color: var(--navy); font-weight: 600; background: var(--blue-bg); padding: 2px 6px; border-radius: 4px; }
+.search-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.search-row input { flex: 1; }
+.empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: #1e293b; color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 13px; z-index: 9999; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; max-width: 300px; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.rx-line { background: var(--bg); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+.modal { background: var(--white); border-radius: 14px; padding: 24px; max-width: 520px; width: 100%; max-height: 85vh; overflow-y: auto; }
+.modal-title { font-size: 16px; font-weight: 500; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.visit-item { background: var(--bg); border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
+.visit-meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+/* Admin only elements */
+.admin-only { display: none; }
+body.is-admin .admin-only { display: block; }
+body.is-admin .admin-only-flex { display: flex; }
+.admin-only-flex { display: none; }
+/* Mobile */
+.menu-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .menu-toggle { display: block; }
+  .grid2, .grid3, .grid4 { grid-template-columns: 1fr; }
+  .grid2.two { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <h1>ClinicOS</h1>
+      <p>Clinic Management</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-section">Clinic</div>
+      <div class="nav-item" onclick="showPage('patients')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Patients
+      </div>
+      <div class="nav-item" onclick="showPage('prescribe')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Prescribe
+      </div>
+      <div class="nav-item" onclick="showPage('inventory')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Inventory
+      </div>
+      <div class="nav-item" onclick="showPage('visits')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Upcoming Visits
+      </div>
+      <div class="nav-section admin-only">Admin</div>
+      <div class="nav-item admin-only" onclick="showPage('users')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+        User Management
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name-disp">Loading...</div>
+          <div class="user-role" id="user-role-disp">-</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="Logout">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <span class="topbar-title" id="page-title">Dashboard</span>
+      </div>
+      <span class="topbar-date" id="topbar-date"></span>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="grid4" id="dash-metrics"></div>
+        <div class="grid2">
+          <div class="card"><div class="card-title">Recent patients</div><div id="dash-recent"></div></div>
+          <div class="card"><div class="card-title">Visits today</div><div id="dash-today"></div></div>
+        </div>
+        <div class="card"><div class="card-title">Low stock medicines</div><div id="dash-lowstock"></div></div>
+      </div>
+
+      <!-- PATIENTS -->
+      <div class="page" id="page-patients">
+        <div class="card">
+          <div class="card-title">Register new patient</div>
+          <div class="grid3">
+            <div class="field"><label>Patient name *</label><input id="p-name" placeholder="Full name" /></div>
+            <div class="field"><label>Father's name *</label><input id="p-father" placeholder="Father's name" /></div>
+            <div class="field"><label>Gender *</label><select id="p-gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+          </div>
+          <div class="grid3">
+            <div class="field"><label>Age *</label><input id="p-age" type="number" placeholder="Years" /></div>
+            <div class="field"><label>Phone *</label><input id="p-phone" placeholder="10-digit" maxlength="10" /></div>
+            <div class="field"><label>Aadhaar *</label><input id="p-aadhaar" placeholder="12-digit" maxlength="12" /></div>
+          </div>
+          <div class="field"><label>Address</label><textarea id="p-address" rows="2" placeholder="Full address"></textarea></div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="registerPatient()">Register patient</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Patient records</div>
+          <div class="search-row"><input id="pt-search" placeholder="Search by name, ID, phone..." oninput="loadPatients()" /></div>
+          <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Age/Gender</th><th>Phone</th><th>Aadhaar</th><th>Next visit</th><th></th></tr></thead><tbody id="pt-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- PRESCRIBE -->
+      <div class="page" id="page-prescribe">
+        <div class="card">
+          <div class="card-title">New prescription</div>
+          <div class="grid2">
+            <div class="field"><label>Select patient *</label><select id="rx-patient" onchange="fillRxPatient()"><option value="">Choose patient</option></select></div>
+            <div id="rx-patient-info" style="background:var(--bg);border-radius:8px;padding:12px;font-size:13px;color:var(--muted);display:flex;align-items:center;">Select a patient to view details</div>
+          </div>
+          <hr class="divider">
+          <div style="font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">Medicines</div>
+          <div id="rx-lines"></div>
+          <button class="btn btn-sm" onclick="addRxLine()" style="margin-bottom:16px;">+ Add medicine</button>
+          <div class="grid2">
+            <div class="field"><label>Visit date</label><input id="rx-date" type="date" /></div>
+            <div class="field"><label>Doctor's notes</label><input id="rx-notes" placeholder="Optional" /></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="savePrescription()">Save &amp; calculate next visit</button></div>
+        </div>
+        <div class="card" id="rx-saved" style="display:none;">
+          <div class="card-title">Prescription saved</div>
+          <div id="rx-saved-content"></div>
+        </div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="page" id="page-inventory">
+        <div class="card">
+          <div class="card-title">Add / update medicine</div>
+          <div class="grid3">
+            <div class="field"><label>Medicine name *</label><input id="inv-name" placeholder="e.g. Paracetamol 500mg" /></div>
+            <div class="field"><label>Category</label><input id="inv-cat" placeholder="e.g. Analgesic" /></div>
+            <div class="field"><label>Stock quantity *</label><input id="inv-qty" type="number" placeholder="Units" /></div>
+          </div>
+          <div class="grid3">
+            <div class="field"><label>Dose (times/day)</label><input id="inv-dose" type="number" placeholder="2" /></div>
+            <div class="field"><label>Units per pack</label><input id="inv-units" type="number" placeholder="10" /></div>
+            <div class="field"><label>Reorder level</label><input id="inv-reorder" type="number" placeholder="5" /></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="addMedicine()">Add to inventory</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Medicine inventory</div>
+          <div class="search-row"><input id="inv-search" placeholder="Search medicines..." oninput="loadInventory()" /></div>
+          <div class="table-wrap"><table><thead><tr><th>Medicine</th><th>Category</th><th>Stock</th><th>Dose/day</th><th>Reorder at</th><th>Status</th><th></th></tr></thead><tbody id="inv-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- VISITS -->
+      <div class="page" id="page-visits">
+        <div class="card">
+          <div class="card-title">Upcoming patient visits</div>
+          <div class="search-row"><input id="vis-search" placeholder="Search by name or date..." oninput="filterVisits()" /></div>
+          <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Last visit</th><th>Next visit</th><th>Status</th><th></th></tr></thead><tbody id="vis-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- USERS (admin) -->
+      <div class="page admin-only" id="page-users">
+        <div class="card">
+          <div class="card-title">Create new user</div>
+          <div class="grid2">
+            <div class="field"><label>Full name *</label><input id="u-name" placeholder="Staff member name" /></div>
+            <div class="field"><label>Username *</label><input id="u-username" placeholder="Login username" /></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Password *</label><input id="u-password" type="password" placeholder="Set password" /></div>
+            <div class="field"><label>Role *</label><select id="u-role"><option value="staff">Staff</option><option value="admin">Admin</option></select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="createUser()">Create user</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">User accounts</div>
+          <div class="table-wrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Created</th><th></th></tr></thead><tbody id="users-table"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Change my password</div>
+          <div class="grid3">
+            <div class="field"><label>Current password</label><input id="cp-current" type="password" /></div>
+            <div class="field"><label>New password</label><input id="cp-new" type="password" /></div>
+            <div class="field"><label>Confirm new</label><input id="cp-confirm" type="password" /></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="changePassword()">Update password</button></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const ROLE = '{{ role }}';
+const UNAME = '{{ user }}';
+let allMedicines = [];
+let allVisits = [];
+let rxLines = [];
+
+// ── Init ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date();
+  document.getElementById('topbar-date').textContent = today.toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('rx-date').value = today.toISOString().split('T')[0];
+  document.getElementById('user-name-disp').textContent = UNAME;
+  document.getElementById('user-role-disp').textContent = ROLE.charAt(0).toUpperCase() + ROLE.slice(1);
+  document.getElementById('user-avatar').textContent = UNAME.charAt(0).toUpperCase();
+  if (ROLE === 'admin') { document.body.classList.add('is-admin'); }
+  loadDashboard();
+});
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function toast(msg, err=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = err ? '#dc2626' : '#1e293b';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function fmtDate(d) { if (!d) return '-'; return new Date(d).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}); }
+
+function visitClass(dateStr) {
+  if (!dateStr) return 'badge-amber';
+  const d = new Date(dateStr); const t = new Date(); t.setHours(0,0,0,0);
+  const diff = Math.round((d - t) / 86400000);
+  if (diff < 0) return 'badge-red';
+  if (diff === 0) return 'badge-blue';
+  if (diff <= 3) return 'badge-amber';
+  return 'badge-green';
+}
+
+function visitLabel(dateStr) {
+  if (!dateStr) return 'Not set';
+  const d = new Date(dateStr); const t = new Date(); t.setHours(0,0,0,0);
+  const diff = Math.round((d - t) / 86400000);
+  if (diff < 0) return 'Overdue';
+  if (diff === 0) return 'Today';
+  if (diff <= 3) return 'Soon';
+  return 'Upcoming';
+}
+
+async function api(url, opts={}) {
+  const r = await fetch(url, { headers: {'Content-Type':'application/json'}, ...opts });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Error');
+  return d;
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.textContent.trim().toLowerCase().startsWith(name === 'visits' ? 'upcoming' : name.slice(0,4))) n.classList.add('active');
+  });
+  const titles = {dashboard:'Dashboard',patients:'Patients',prescribe:'Prescribe',inventory:'Inventory',visits:'Upcoming Visits',users:'User Management'};
+  document.getElementById('page-title').textContent = titles[name] || name;
+  document.getElementById('sidebar').classList.remove('open');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'patients') loadPatients();
+  if (name === 'prescribe') { loadPrescribeDropdown(); rxLines = []; renderRxLines(); }
+  if (name === 'inventory') loadInventory();
+  if (name === 'visits') loadVisits();
+  if (name === 'users') loadUsers();
+}
+
+async function doLogout() {
+  await fetch('/api/logout', {method:'POST'});
+  window.location.href = '/login';
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const d = await api('/api/dashboard');
+  const s = d.stats;
+  document.getElementById('dash-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total patients</div><div class="metric-value">${s.total_patients}</div></div>
+    <div class="metric"><div class="metric-label">Visits today</div><div class="metric-value" style="color:var(--navy)">${s.today_visits}</div></div>
+    <div class="metric"><div class="metric-label">Overdue visits</div><div class="metric-value" style="color:var(--red)">${s.overdue}</div></div>
+    <div class="metric"><div class="metric-label">Low stock</div><div class="metric-value" style="color:var(--amber)">${s.low_stock}</div></div>
+  `;
+  document.getElementById('dash-recent').innerHTML = d.recent_patients.length
+    ? d.recent_patients.map(p=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><span class="pid">${p.patient_id}</span><span style="flex:1;font-size:13px">${p.name}</span><span style="font-size:12px;color:var(--muted)">${p.age}y ${p.gender}</span></div>`).join('')
+    : '<div class="empty">No patients yet</div>';
+  document.getElementById('dash-today').innerHTML = d.today_visits_list.length
+    ? d.today_visits_list.map(p=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><span class="pid">${p.patient_id}</span><span style="flex:1;font-size:13px">${p.name}</span><span style="font-size:12px;color:var(--muted)">${p.phone}</span></div>`).join('')
+    : '<div class="empty">No visits today</div>';
+  document.getElementById('dash-lowstock').innerHTML = d.low_stock_meds.length
+    ? `<div class="table-wrap"><table><thead><tr><th>Medicine</th><th>Stock</th><th>Reorder at</th></tr></thead><tbody>${d.low_stock_meds.map(m=>`<tr><td>${m.name}</td><td style="color:var(--red);font-weight:500">${m.stock}</td><td>${m.reorder_level}</td></tr>`).join('')}</tbody></table></div>`
+    : '<div class="empty">All medicines adequately stocked</div>';
+}
+
+// ── Patients ─────────────────────────────────────────────────────────────────
+async function loadPatients() {
+  const q = document.getElementById('pt-search').value;
+  const patients = await api('/api/patients?q=' + encodeURIComponent(q));
+  const tbody = document.getElementById('pt-table');
+  if (!patients.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty">No patients found</div></td></tr>'; return; }
+  tbody.innerHTML = patients.map(p => `<tr>
+    <td><span class="pid">${p.patient_id}</span></td>
+    <td><strong style="font-weight:500">${p.name}</strong><br><span style="font-size:11px;color:var(--muted)">S/O ${p.father_name}</span></td>
+    <td>${p.age}y / ${p.gender}</td>
+    <td>${p.phone}</td>
+    <td style="font-family:monospace;font-size:12px">${p.aadhaar ? p.aadhaar.replace(/(\d{4})(\d{4})(\d{4})/,'$1 $2 $3') : '-'}</td>
+    <td>${p.next_visit ? `<span class="badge ${visitClass(p.next_visit)}">${fmtDate(p.next_visit)}</span>` : '<span class="badge badge-amber">Not set</span>'}</td>
+    <td><button class="btn btn-sm" onclick="viewHistory('${p.patient_id}')">History</button></td>
+  </tr>`).join('');
+}
+
+async function registerPatient() {
+  const name = document.getElementById('p-name').value.trim();
+  const father = document.getElementById('p-father').value.trim();
+  const gender = document.getElementById('p-gender').value;
+  const age = document.getElementById('p-age').value;
+  const phone = document.getElementById('p-phone').value.trim();
+  const aadhaar = document.getElementById('p-aadhaar').value.trim();
+  const address = document.getElementById('p-address').value.trim();
+  if (!name||!father||!gender||!age||!phone||!aadhaar) { toast('Fill all required fields', true); return; }
+  if (phone.length !== 10) { toast('Phone must be 10 digits', true); return; }
+  if (aadhaar.length !== 12) { toast('Aadhaar must be 12 digits', true); return; }
+  try {
+    const r = await api('/api/patients', {method:'POST', body: JSON.stringify({name,father_name:father,gender,age:parseInt(age),phone,aadhaar,address})});
+    toast('Patient ' + r.patient_id + ' registered successfully');
+    ['p-name','p-father','p-age','p-phone','p-aadhaar','p-address'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('p-gender').value='';
+    loadPatients();
+  } catch(e) { toast(e.message, true); }
+}
+
+async function viewHistory(pid) {
+  const d = await api('/api/patients/' + pid);
+  const p = d.patient;
+  let html = `<div style="margin-bottom:12px"><strong style="font-size:15px;font-weight:500">${p.name}</strong> <span class="pid">${p.patient_id}</span><br>
+    <span style="font-size:13px;color:var(--muted)">${p.age}y ${p.gender} | ${p.phone} | S/O ${p.father_name}</span><br>
+    <span style="font-size:13px;color:var(--muted)">Aadhaar: ${p.aadhaar ? p.aadhaar.replace(/(\d{4})(\d{4})(\d{4})/,'$1 $2 $3') : '-'}</span></div>`;
+  html += '<div style="font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Visit history</div>';
+  if (!d.history.length) html += '<div class="empty">No prescriptions yet</div>';
+  else html += d.history.map(rx=>`<div class="visit-item"><div class="visit-meta"><span>Visit: ${fmtDate(rx.visit_date)}</span><span>Next: ${fmtDate(rx.next_visit)}</span></div><div>${rx.meds || 'No medicines recorded'}</div>${rx.notes?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${rx.notes}</div>`:''}</div>`).join('');
+  showModal('Patient History', html);
+}
+
+// ── Prescribe ─────────────────────────────────────────────────────────────────
+async function loadPrescribeDropdown() {
+  const pts = await api('/api/patients');
+  const sel = document.getElementById('rx-patient');
+  sel.innerHTML = '<option value="">Choose patient</option>' + pts.map(p=>`<option value="${p.patient_id}">${p.patient_id} — ${p.name}</option>`).join('');
+  allMedicines = await api('/api/medicines');
+}
+
+async function fillRxPatient() {
+  const pid = document.getElementById('rx-patient').value;
+  const el = document.getElementById('rx-patient-info');
+  if (!pid) { el.innerHTML = 'Select a patient to view details'; return; }
+  const d = await api('/api/patients/' + pid);
+  const p = d.patient;
+  el.innerHTML = `<div><strong style="font-weight:500">${p.name}</strong>, ${p.age}y ${p.gender}<br><span style="font-size:12px;color:var(--muted)">Phone: ${p.phone}</span><br><span style="font-size:12px;color:var(--muted)">${p.next_visit ? 'Next visit: ' + fmtDate(p.next_visit) : 'No upcoming visit'}</span></div>`;
+}
+
+function addRxLine() { rxLines.push({medId:'', days:7}); renderRxLines(); }
+
+function renderRxLines() {
+  const el = document.getElementById('rx-lines');
+  if (!rxLines.length) { el.innerHTML = '<div class="empty" style="padding:12px">No medicines added</div>'; return; }
+  const available = allMedicines.filter(m => m.stock > 0);
+  el.innerHTML = rxLines.map((line,i) => `<div class="rx-line" style="display:grid;grid-template-columns:1fr 100px 36px;gap:8px;align-items:end">
+    <div><label>Medicine</label><select onchange="rxLines[${i}].medId=this.value">
+      <option value="">Select</option>${available.map(m=>`<option value="${m.id}" ${line.medId==m.id?'selected':''}>${m.name} (${m.stock} in stock)</option>`).join('')}
+    </select></div>
+    <div><label>Days</label><input type="number" value="${line.days}" min="1" onchange="rxLines[${i}].days=parseInt(this.value)||7" /></div>
+    <button class="btn btn-sm btn-danger" style="height:36px;padding:0 10px" onclick="rxLines.splice(${i},1);renderRxLines()">✕</button>
+  </div>`).join('');
+}
+
+async function savePrescription() {
+  const pid = document.getElementById('rx-patient').value;
+  const date = document.getElementById('rx-date').value;
+  const notes = document.getElementById('rx-notes').value;
+  if (!pid) { toast('Select a patient', true); return; }
+  if (!rxLines.length || rxLines.some(l=>!l.medId)) { toast('Add at least one medicine', true); return; }
+  try {
+    const r = await api('/api/prescriptions', {method:'POST', body: JSON.stringify({patient_id:pid, visit_date:date, notes, items: rxLines.map(l=>({medicine_id:l.medId, days:l.days}))})});
+    toast('Prescription saved. Next visit: ' + fmtDate(r.next_visit));
+    const pt = (await api('/api/patients/' + pid)).patient;
+    const meds = rxLines.map(l => { const m = allMedicines.find(x=>x.id==l.medId); return m ? `${m.name} — ${m.dose_per_day}x/day for ${l.days} days` : ''; });
+    document.getElementById('rx-saved-content').innerHTML = `
+      <div style="margin-bottom:12px"><span class="pid">${pid}</span> <strong style="font-weight:500">${pt.name}</strong></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Visit: ${fmtDate(date)} &nbsp;→&nbsp; <strong style="color:var(--text)">Next visit: ${fmtDate(r.next_visit)}</strong></div>
+      ${meds.map(m=>`<div class="visit-item">${m}</div>`).join('')}
+      ${notes?`<div style="font-size:13px;color:var(--muted);margin-top:8px">Notes: ${notes}</div>`:''}
+    `;
+    document.getElementById('rx-saved').style.display = 'block';
+    rxLines = []; renderRxLines();
+    document.getElementById('rx-patient').value = '';
+    document.getElementById('rx-notes').value = '';
+    document.getElementById('rx-patient-info').innerHTML = 'Select a patient to view details';
+    loadPrescribeDropdown();
+  } catch(e) { toast(e.message, true); }
+}
+
+// ── Inventory ─────────────────────────────────────────────────────────────────
+async function loadInventory() {
+  const q = document.getElementById('inv-search').value;
+  const meds = await api('/api/medicines?q=' + encodeURIComponent(q));
+  allMedicines = meds;
+  const tbody = document.getElementById('inv-table');
+  if (!meds.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty">No medicines found</div></td></tr>'; return; }
+  tbody.innerHTML = meds.map(m => {
+    const status = m.stock <= 0 ? '<span class="badge badge-red">Out of stock</span>' : m.stock <= m.reorder_level ? '<span class="badge badge-amber">Low stock</span>' : '<span class="badge badge-green">In stock</span>';
+    const del = ROLE==='admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteMed(${m.id},'${m.name}')">Delete</button>` : '';
+    return `<tr><td><strong style="font-weight:500">${m.name}</strong></td><td>${m.category||'-'}</td><td><strong style="font-weight:500">${m.stock}</strong></td><td>${m.dose_per_day}x/day</td><td>${m.reorder_level}</td><td>${status}</td><td style="display:flex;gap:6px"><button class="btn btn-sm" onclick="restockMed(${m.id},'${m.name}')">Restock</button>${del}</td></tr>`;
+  }).join('');
+}
+
+async function addMedicine() {
+  const name = document.getElementById('inv-name').value.trim();
+  const stock = parseInt(document.getElementById('inv-qty').value);
+  if (!name || isNaN(stock)) { toast('Name and stock are required', true); return; }
+  try {
+    const r = await api('/api/medicines', {method:'POST', body: JSON.stringify({name, category:document.getElementById('inv-cat').value, stock, dose_per_day:parseInt(document.getElementById('inv-dose').value)||2, units_per_pack:parseInt(document.getElementById('inv-units').value)||10, reorder_level:parseInt(document.getElementById('inv-reorder').value)||5})});
+    toast(r.updated ? 'Stock updated for ' + name : name + ' added to inventory');
+    ['inv-name','inv-cat','inv-qty','inv-dose','inv-units','inv-reorder'].forEach(id=>document.getElementById(id).value='');
+    loadInventory();
+  } catch(e) { toast(e.message, true); }
+}
+
+async function restockMed(id, name) {
+  const qty = prompt(`Add how many units to "${name}"?`);
+  if (!qty || isNaN(parseInt(qty))) return;
+  await api('/api/medicines/' + id + '/restock', {method:'POST', body: JSON.stringify({qty:parseInt(qty)})});
+  toast('Stock updated'); loadInventory();
+}
+
+async function deleteMed(id, name) {
+  if (!confirm(`Delete "${name}" from inventory?`)) return;
+  await api('/api/medicines/' + id, {method:'DELETE'});
+  toast('Medicine deleted'); loadInventory();
+}
+
+// ── Visits ────────────────────────────────────────────────────────────────────
+async function loadVisits() {
+  allVisits = await api('/api/upcoming_visits');
+  filterVisits();
+}
+
+function filterVisits() {
+  const q = (document.getElementById('vis-search').value || '').toLowerCase();
+  const filtered = allVisits.filter(v => v.name.toLowerCase().includes(q) || v.patient_id.includes(q) || (v.next_visit||'').includes(q));
+  const tbody = document.getElementById('vis-table');
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty">No visits scheduled</div></td></tr>'; return; }
+  tbody.innerHTML = filtered.map(v => `<tr>
+    <td><span class="pid">${v.patient_id}</span></td>
+    <td>${v.name}</td><td>${v.phone}</td>
+    <td>${fmtDate(v.last_visit)}</td>
+    <td><strong style="font-weight:500">${fmtDate(v.next_visit)}</strong></td>
+    <td><span class="badge ${visitClass(v.next_visit)}">${visitLabel(v.next_visit)}</span></td>
+    <td><button class="btn btn-sm" onclick="viewHistory('${v.patient_id}')">View</button></td>
+  </tr>`).join('');
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  if (ROLE !== 'admin') return;
+  const users = await api('/api/users');
+  document.getElementById('users-table').innerHTML = users.map(u=>`<tr>
+    <td>${u.name}</td><td>${u.username}</td>
+    <td><span class="badge ${u.role==='admin'?'badge-blue':'badge-green'}">${u.role}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${fmtDate(u.created_at)}</td>
+    <td>${u.username!=='admin'?`<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.username}')">Remove</button>`:''}</td>
+  </tr>`).join('');
+}
+
+async function createUser() {
+  const name=document.getElementById('u-name').value.trim(), username=document.getElementById('u-username').value.trim(), password=document.getElementById('u-password').value, role=document.getElementById('u-role').value;
+  if(!name||!username||!password) { toast('Fill all fields', true); return; }
+  try { await api('/api/users',{method:'POST',body:JSON.stringify({name,username,password,role})}); toast('User created'); ['u-name','u-username','u-password'].forEach(id=>document.getElementById(id).value=''); loadUsers(); } catch(e) { toast(e.message, true); }
+}
+
+async function deleteUser(id, uname) {
+  if(!confirm(`Remove user "${uname}"?`)) return;
+  await api('/api/users/'+id,{method:'DELETE'}); toast('User removed'); loadUsers();
+}
+
+async function changePassword() {
+  const cur=document.getElementById('cp-current').value, nw=document.getElementById('cp-new').value, conf=document.getElementById('cp-confirm').value;
+  if(!cur||!nw) { toast('Fill all fields', true); return; }
+  if(nw!==conf) { toast('Passwords do not match', true); return; }
+  try { await api('/api/change_password',{method:'POST',body:JSON.stringify({current:cur,new:nw})}); toast('Password updated'); ['cp-current','cp-new','cp-confirm'].forEach(id=>document.getElementById(id).value=''); } catch(e) { toast(e.message, true); }
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function showModal(title, html) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal"><div class="modal-title">${title}<button class="btn btn-sm" onclick="this.closest('.modal-overlay').remove()">Close</button></div>${html}</div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+</script>
+</body>
+</html>
