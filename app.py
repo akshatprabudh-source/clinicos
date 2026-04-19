@@ -336,4 +336,6 @@ if __name__ == '__main__':
     print("🌐 Open in browser: http://localhost:5000")
     print("📱 On phone (same WiFi): http://<your-pc-ip>:5000")
     print("⏹  Press Ctrl+C to stop\n")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+   import os
+port = int(os.environ.get('PORT', 5000))
+app.run(host='0.0.0.0', port=port, debug=False)
